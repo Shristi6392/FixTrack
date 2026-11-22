@@ -53,3 +53,39 @@ describe('create and list tickets', () => {
     expect((await request(app).get(`/tickets/${id}`).set(bearer(admin.token))).status).toBe(200);
   });
 });
+
+describe('assign and status', () => {
+  let id;
+  beforeAll(async () => { id = (await create(student, { title: 'Broken chair' })).body.ticket.id; });
+  const patch = (u, path, body) => request(app).patch(`/tickets/${id}/${path}`).set(bearer(u.token)).send(body);
+
+  test('only admin can assign, and only to a technician', async () => {
+    expect((await patch(student, 'assign', { assignee_id: tech.user.id })).status).toBe(403);
+    expect((await patch(admin, 'assign', { assignee_id: student.user.id })).status).toBe(400);
+    const res = await patch(admin, 'assign', { assignee_id: tech.user.id });
+    expect(res.status).toBe(200);
+    expect(res.body.ticket).toMatchObject({ status: 'Assigned', assignee_id: tech.user.id });
+  });
+
+  test('technician sees assigned ticket and drives it to Resolved', async () => {
+    expect((await request(app).get('/tickets').set(bearer(tech.token))).body.total).toBe(1);
+    expect((await patch(student, 'status', { status: 'In Progress' })).status).toBe(403);
+    expect((await patch(tech, 'status', { status: 'Resolved' })).status).toBe(409);
+    expect((await patch(tech, 'status', { status: 'In Progress' })).body.ticket.status).toBe('In Progress');
+    const r = await patch(tech, 'status', { status: 'Resolved' });
+    expect(r.body.ticket.status).toBe('Resolved');
+    expect(r.body.ticket.resolved_at).toBeTruthy();
+  });
+
+  test('requester can reopen; other students and unassigned technicians cannot touch it', async () => {
+    expect((await patch(student2, 'status', { status: 'Reopened' })).status).toBe(404);
+    const re = await patch(student, 'status', { status: 'Reopened' });
+    expect(re.body.ticket).toMatchObject({ status: 'Reopened', resolved_at: null });
+    await patch(admin, 'assign', { assignee_id: tech.user.id });
+    await patch(tech, 'status', { status: 'In Progress' });
+    await patch(tech, 'status', { status: 'Resolved' });
+    expect((await patch(student, 'status', { status: 'Closed' })).body.ticket.status).toBe('Closed');
+    expect((await patch(admin, 'assign', { assignee_id: tech.user.id })).status).toBe(409);
+    expect((await patch(admin, 'status', { status: 'Open' })).status).toBe(409);
+  });
+});

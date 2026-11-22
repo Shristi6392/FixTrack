@@ -87,4 +87,65 @@ router.get('/:id', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---- Status lifecycle -------------------------------------------------------
+// Allowed transitions and which roles may perform them.
+const TRANSITIONS = {
+  Assigned: { 'In Progress': ['technician', 'admin'] },
+  'In Progress': { Resolved: ['technician', 'admin'] },
+  Resolved: { Closed: ['student', 'admin'], Reopened: ['student', 'admin'] },
+  Reopened: { 'In Progress': ['technician', 'admin'] },
+  Open: {},
+  Closed: {},
+};
+
+const statusSchema = z.object({ status: z.enum(STATUSES) });
+const assignSchema = z.object({ assignee_id: z.number().int().positive() });
+
+async function loadTicket(id) {
+  const { rows } = await query('SELECT * FROM tickets WHERE id=$1 AND deleted_at IS NULL', [id]);
+  return rows[0];
+}
+
+router.patch('/:id/status', async (req, res, next) => {
+  try {
+    const id = z.coerce.number().int().positive().parse(req.params.id);
+    const { status } = statusSchema.parse(req.body);
+    const t = await loadTicket(id);
+    if (!t) return res.status(404).json({ error: 'Ticket not found' });
+    const { role, id: uid } = req.user;
+    // Students may only touch their own tickets, technicians only assigned ones.
+    if ((role === 'student' && t.requester_id !== uid) || (role === 'technician' && t.assignee_id !== uid)) {
+      return res.status(404).json({ error: 'Ticket not found' });
+    }
+    const allowedRoles = (TRANSITIONS[t.status] || {})[status];
+    if (!allowedRoles) return res.status(409).json({ error: `Cannot move ticket from ${t.status} to ${status}` });
+    if (!allowedRoles.includes(role)) return res.status(403).json({ error: `Role ${role} cannot set status ${status}` });
+    const { rows } = await query(
+      `UPDATE tickets SET status=$1, updated_at=now(),
+         resolved_at = CASE WHEN $1='Resolved' THEN now() WHEN $1='Reopened' THEN NULL ELSE resolved_at END
+       WHERE id=$2 RETURNING *`,
+      [status, id]
+    );
+    res.json({ ticket: rows[0] });
+  } catch (e) { next(e); }
+});
+
+router.patch('/:id/assign', requireRole('admin'), async (req, res, next) => {
+  try {
+    const id = z.coerce.number().int().positive().parse(req.params.id);
+    const { assignee_id } = assignSchema.parse(req.body);
+    const t = await loadTicket(id);
+    if (!t) return res.status(404).json({ error: 'Ticket not found' });
+    if (['Resolved', 'Closed'].includes(t.status)) return res.status(409).json({ error: `Cannot assign a ${t.status} ticket` });
+    const tech = (await query("SELECT id FROM users WHERE id=$1 AND role='technician' AND is_active", [assignee_id])).rows[0];
+    if (!tech) return res.status(400).json({ error: 'assignee_id must be an active technician' });
+    const newStatus = ['Open', 'Reopened'].includes(t.status) ? 'Assigned' : t.status;
+    const { rows } = await query(
+      'UPDATE tickets SET assignee_id=$1, status=$2, updated_at=now() WHERE id=$3 RETURNING *',
+      [assignee_id, newStatus, id]
+    );
+    res.json({ ticket: rows[0] });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;
