@@ -8,7 +8,7 @@ const router = useRouter();
 const links = computed(() => ({
   student: [{ to: '/report', label: 'Report a problem' }, { to: '/my-tickets', label: 'My tickets' }],
   technician: [{ to: '/jobs', label: 'My jobs' }],
-  admin: [{ to: '/admin', label: 'Board' }, { to: '/pm-schedules', label: 'PM schedules' }],
+  admin: [{ to: '/admin', label: 'Board' }, { to: '/dashboard', label: 'Dashboard' }, { to: '/pm-schedules', label: 'PM schedules' }],
 }[auth.role] || []));
 
 function logout() { auth.logout(); router.push('/login'); }

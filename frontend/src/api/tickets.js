@@ -29,3 +29,7 @@ export const listSchedules = () => http.get('/pm-schedules').then((r) => r.data.
 export const createSchedule = (body) => http.post('/pm-schedules', body).then((r) => r.data.schedule);
 export const updateSchedule = (id, body) => http.patch(`/pm-schedules/${id}`, body).then((r) => r.data.schedule);
 export const deleteSchedule = (id) => http.delete(`/pm-schedules/${id}`);
+
+export const dashSummary = (p) => http.get('/dashboard/summary', { params: p }).then((r) => r.data);
+export const dashBreakdown = (p) => http.get('/dashboard/by-category', { params: p }).then((r) => r.data);
+export const dashFailing = (p) => http.get('/dashboard/failing-assets', { params: p }).then((r) => r.data);

@@ -19,6 +19,7 @@ if (process.env.NODE_ENV !== 'test' || process.env.RATE_LIMIT_ENABLED) {
 app.use('/auth', require('./routes/auth'));
 
 app.use('/uploads', express.static(require('path').join(__dirname, '..', 'uploads')));
+app.use('/dashboard', require('./routes/dashboard'));
 app.use('/pm-schedules', require('./routes/pmSchedules'));
 app.use('/ai', require('./routes/ai'));
 app.use('/users', require('./routes/users'));
