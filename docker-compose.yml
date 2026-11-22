@@ -20,5 +20,31 @@ services:
     ports:
       - "6379:6379"
 
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://fixtrack:fixtrack@db:5432/fixtrack
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CORS_ORIGIN: http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "4000:4000"
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
 volumes:
   pgdata:
+  uploads:
