@@ -18,3 +18,5 @@ export const listAssets = (params) => http.get('/assets', { params }).then((r) =
 export const getComments = (id) => http.get(`/tickets/${id}/comments`).then((r) => r.data.comments);
 export const addComment = (id, body, is_internal = false) => http.post(`/tickets/${id}/comments`, { body, is_internal }).then((r) => r.data.comment);
 export const getAttachments = (id) => http.get(`/tickets/${id}/attachments`).then((r) => r.data.attachments);
+
+export const listUsers = (role) => http.get('/users', { params: { role } }).then((r) => r.data.users);
