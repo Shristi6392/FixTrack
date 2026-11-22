@@ -24,3 +24,8 @@ export const listUsers = (role) => http.get('/users', { params: { role } }).then
 export const suggestTriage = (title, description) => http.post('/ai/triage', { title, description }).then((r) => r.data);
 
 export const checkDuplicates = (body) => http.post('/ai/duplicates', body).then((r) => r.data.duplicates);
+
+export const listSchedules = () => http.get('/pm-schedules').then((r) => r.data.schedules);
+export const createSchedule = (body) => http.post('/pm-schedules', body).then((r) => r.data.schedule);
+export const updateSchedule = (id, body) => http.patch(`/pm-schedules/${id}`, body).then((r) => r.data.schedule);
+export const deleteSchedule = (id) => http.delete(`/pm-schedules/${id}`);
