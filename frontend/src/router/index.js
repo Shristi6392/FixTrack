@@ -9,6 +9,7 @@ export const routes = [
   { path: '/my-tickets', name: 'my-tickets', component: () => import('../views/MyTicketsView.vue'), meta: { requiresAuth: true, roles: ['student'] } },
   { path: '/tickets/:id', name: 'ticket-detail', component: () => import('../views/TicketDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/admin', name: 'admin', component: () => import('../views/AdminBoardView.vue'), meta: { requiresAuth: true, roles: ['admin'] } },
+  { path: '/jobs', name: 'jobs', component: () => import('../views/TechnicianJobsView.vue'), meta: { requiresAuth: true, roles: ['technician'] } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue') },
 ];
 
