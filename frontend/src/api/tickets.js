@@ -22,3 +22,5 @@ export const getAttachments = (id) => http.get(`/tickets/${id}/attachments`).the
 export const listUsers = (role) => http.get('/users', { params: { role } }).then((r) => r.data.users);
 
 export const suggestTriage = (title, description) => http.post('/ai/triage', { title, description }).then((r) => r.data);
+
+export const checkDuplicates = (body) => http.post('/ai/duplicates', body).then((r) => r.data.duplicates);

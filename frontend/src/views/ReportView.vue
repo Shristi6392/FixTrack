@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { CATEGORIES, PRIORITIES } from '../constants';
-import { createTicket, uploadPhoto, listLocations, listAssets, suggestTriage } from '../api/tickets';
+import { createTicket, uploadPhoto, listLocations, listAssets, suggestTriage, checkDuplicates } from '../api/tickets';
 import { errorMessage } from '../api/http';
 
 const router = useRouter();
@@ -48,9 +48,19 @@ function onFile(e) {
   error.value = ''; photo.value = f || null;
 }
 
+const duplicates = ref([]);
+const skipDuplicateCheck = ref(false);
+
 async function submit() {
   error.value = ''; loading.value = true;
   try {
+    // Duplicate check is best-effort and runs once; "Submit anyway" skips it.
+    if (!skipDuplicateCheck.value) {
+      try {
+        duplicates.value = await checkDuplicates({ title: form.value.title, description: form.value.description, location_id: form.value.location_id ? Number(form.value.location_id) : null });
+      } catch { duplicates.value = []; }
+      if (duplicates.value.length) { skipDuplicateCheck.value = true; return; }
+    }
     const t = await createTicket({
       ...form.value,
       location_id: form.value.location_id ? Number(form.value.location_id) : null,
@@ -107,9 +117,14 @@ async function submit() {
       <label class="block text-sm font-medium">Photo (JPEG, PNG or WebP, max 5 MB)
         <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm" @change="onFile" />
       </label>
+      <div v-if="duplicates.length" class="rounded-lg bg-amber-50 p-3 text-sm ring-1 ring-amber-300">
+        <p class="font-semibold text-amber-800">This might already be reported:</p>
+        <ul class="mt-1 list-disc pl-5"><li v-for="d in duplicates" :key="d.id">{{ d.title }} <span class="text-slate-500">({{ d.status }})</span></li></ul>
+        <p class="mt-1 text-slate-600">If it's the same problem you don't need a new ticket. Otherwise press "Submit anyway".</p>
+      </div>
       <p v-if="error" class="rounded bg-red-50 p-2 text-sm text-red-700" role="alert">{{ error }}</p>
       <button :disabled="loading" class="rounded-lg bg-indigo-600 px-5 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
-        {{ loading ? 'Submitting…' : 'Submit ticket' }}
+        {{ loading ? 'Submitting…' : skipDuplicateCheck && duplicates.length ? 'Submit anyway' : 'Submit ticket' }}
       </button>
     </form>
   </main>
