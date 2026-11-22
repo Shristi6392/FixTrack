@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { z } = require('zod');
 const { query } = require('../db/pool');
 const config = require('../config');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -43,5 +44,7 @@ router.post('/login', async (req, res, next) => {
     res.json({ user: publicUser(u), token: signToken(u) });
   } catch (e) { next(e); }
 });
+
+router.get('/me', authenticate, (req, res) => res.json({ user: publicUser(req.user) }));
 
 module.exports = router;
