@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://fixtrack:fixtrack@localhost:5432/fixtrack',
