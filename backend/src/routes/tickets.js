@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const { query } = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const { logEvent } = require('../services/events');
 const { PRIORITIES, CATEGORIES, STATUSES } = require('../constants');
 
@@ -86,6 +87,31 @@ router.get('/:id', async (req, res, next) => {
     const { rows } = await query(`${SELECT} WHERE t.id = $1 AND t.deleted_at IS NULL AND ${scopeClause(req.user, params)}`, params);
     if (!rows[0]) return res.status(404).json({ error: 'Ticket not found' });
     res.json({ ticket: rows[0] });
+  } catch (e) { next(e); }
+});
+
+// Photo upload (field name "photo"); requester, assignee or admin.
+router.post('/:id/attachments', upload.single('photo'), async (req, res, next) => {
+  try {
+    const id = z.coerce.number().int().positive().parse(req.params.id);
+    const params = [id];
+    const t = await query(`SELECT t.id FROM tickets t WHERE t.id=$1 AND t.deleted_at IS NULL AND ${scopeClause(req.user, params)}`, params);
+    if (!t.rows[0]) return res.status(404).json({ error: 'Ticket not found' });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded (field "photo")' });
+    const { rows } = await query('INSERT INTO attachments(ticket_id,url,uploaded_by) VALUES ($1,$2,$3) RETURNING *',
+      [id, `/uploads/${req.file.filename}`, req.user.id]);
+    await logEvent(id, req.user.id, 'attachment_added', null, rows[0].url);
+    res.status(201).json({ attachment: rows[0] });
+  } catch (e) { next(e); }
+});
+
+router.get('/:id/attachments', async (req, res, next) => {
+  try {
+    const id = z.coerce.number().int().positive().parse(req.params.id);
+    const params = [id];
+    const t = await query(`SELECT t.id FROM tickets t WHERE t.id=$1 AND t.deleted_at IS NULL AND ${scopeClause(req.user, params)}`, params);
+    if (!t.rows[0]) return res.status(404).json({ error: 'Ticket not found' });
+    res.json({ attachments: (await query('SELECT * FROM attachments WHERE ticket_id=$1 ORDER BY id', [id])).rows });
   } catch (e) { next(e); }
 });
 
