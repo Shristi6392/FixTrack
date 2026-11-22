@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  test: { environment: 'jsdom', globals: true },
   server: {
     port: 5173,
     // Proxy /api/* to the Express backend so no CORS is needed in dev.
