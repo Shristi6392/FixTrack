@@ -6,6 +6,8 @@ export const routes = [
   { path: '/login', name: 'login', component: () => import('../views/LoginView.vue'), meta: { guest: true } },
   { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue'), meta: { guest: true } },
   { path: '/report', name: 'report', component: () => import('../views/ReportView.vue'), meta: { requiresAuth: true, roles: ['student'] } },
+  { path: '/my-tickets', name: 'my-tickets', component: () => import('../views/MyTicketsView.vue'), meta: { requiresAuth: true, roles: ['student'] } },
+  { path: '/tickets/:id', name: 'ticket-detail', component: () => import('../views/TicketDetailView.vue'), meta: { requiresAuth: true } },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue') },
 ];
 

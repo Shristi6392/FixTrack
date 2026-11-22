@@ -115,6 +115,40 @@ router.get('/:id/attachments', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---- Comments (internal notes are hidden from students) ----------------------
+const commentSchema = z.object({ body: z.string().min(1).max(2000), is_internal: z.boolean().default(false) });
+
+async function visibleTicket(req) {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const params = [id];
+  const t = await query(`SELECT t.id FROM tickets t WHERE t.id=$1 AND t.deleted_at IS NULL AND ${scopeClause(req.user, params)}`, params);
+  return t.rows[0] ? id : null;
+}
+
+router.get('/:id/comments', async (req, res, next) => {
+  try {
+    const id = await visibleTicket(req);
+    if (!id) return res.status(404).json({ error: 'Ticket not found' });
+    const { rows } = await query(
+      `SELECT c.*, u.name AS author_name, u.role AS author_role FROM ticket_comments c JOIN users u ON u.id=c.author_id
+       WHERE c.ticket_id=$1 ${req.user.role === 'student' ? 'AND NOT c.is_internal' : ''} ORDER BY c.created_at, c.id`, [id]);
+    res.json({ comments: rows });
+  } catch (e) { next(e); }
+});
+
+router.post('/:id/comments', async (req, res, next) => {
+  try {
+    const id = await visibleTicket(req);
+    if (!id) return res.status(404).json({ error: 'Ticket not found' });
+    const b = commentSchema.parse(req.body);
+    if (b.is_internal && req.user.role === 'student') return res.status(403).json({ error: 'Students cannot post internal notes' });
+    const { rows } = await query('INSERT INTO ticket_comments(ticket_id,author_id,body,is_internal) VALUES ($1,$2,$3,$4) RETURNING *',
+      [id, req.user.id, b.body, b.is_internal]);
+    await query('UPDATE tickets SET updated_at=now() WHERE id=$1', [id]);
+    res.status(201).json({ comment: { ...rows[0], author_name: req.user.name, author_role: req.user.role } });
+  } catch (e) { next(e); }
+});
+
 // ---- Status lifecycle -------------------------------------------------------
 // Allowed transitions and which roles may perform them.
 const TRANSITIONS = {

@@ -14,3 +14,7 @@ export const getEvents = (id) => http.get(`/tickets/${id}/events`).then((r) => r
 
 export const listLocations = () => http.get('/locations').then((r) => r.data.locations);
 export const listAssets = (params) => http.get('/assets', { params }).then((r) => r.data.assets);
+
+export const getComments = (id) => http.get(`/tickets/${id}/comments`).then((r) => r.data.comments);
+export const addComment = (id, body, is_internal = false) => http.post(`/tickets/${id}/comments`, { body, is_internal }).then((r) => r.data.comment);
+export const getAttachments = (id) => http.get(`/tickets/${id}/attachments`).then((r) => r.data.attachments);

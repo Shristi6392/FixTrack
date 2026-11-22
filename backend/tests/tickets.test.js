@@ -108,3 +108,19 @@ describe('history events', () => {
     expect((await request(app).get(`/tickets/${id}/events`).set(bearer(student2.token))).status).toBe(404);
   });
 });
+
+describe('comments', () => {
+  test('students cannot see or write internal notes; others can', async () => {
+    const id = (await create(student, { title: 'Comment target' })).body.ticket.id;
+    await request(app).patch(`/tickets/${id}/assign`).set(bearer(admin.token)).send({ assignee_id: tech.user.id });
+    const post = (u, body) => request(app).post(`/tickets/${id}/comments`).set(bearer(u.token)).send(body);
+    expect((await post(student, { body: 'Please hurry' })).status).toBe(201);
+    expect((await post(student, { body: 'secret', is_internal: true })).status).toBe(403);
+    expect((await post(tech, { body: 'Need a new part', is_internal: true })).status).toBe(201);
+    expect((await post(student, { body: '' })).status).toBe(400);
+    expect((await post(student2, { body: 'intruder' })).status).toBe(404);
+    const get = (u) => request(app).get(`/tickets/${id}/comments`).set(bearer(u.token));
+    expect((await get(student)).body.comments).toHaveLength(1);
+    expect((await get(tech)).body.comments).toHaveLength(2);
+  });
+});
