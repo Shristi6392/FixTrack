@@ -2,6 +2,7 @@ const express = require('express');
 const { z } = require('zod');
 const { query } = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { logEvent } = require('../services/events');
 const { PRIORITIES, CATEGORIES, STATUSES } = require('../constants');
 
 const router = express.Router();
@@ -50,6 +51,7 @@ router.post('/', requireRole('student'), async (req, res, next) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
       [b.title, b.description, b.category, b.priority, req.user.id, b.location_id ?? null, b.asset_id ?? null]
     );
+    await logEvent(rows[0].id, req.user.id, 'created', null, 'Open');
     res.status(201).json({ ticket: rows[0] });
   } catch (e) { next(e); }
 });
@@ -126,6 +128,7 @@ router.patch('/:id/status', async (req, res, next) => {
        WHERE id=$2 RETURNING *`,
       [status, id]
     );
+    await logEvent(id, uid, 'status_changed', t.status, status);
     res.json({ ticket: rows[0] });
   } catch (e) { next(e); }
 });
@@ -144,7 +147,23 @@ router.patch('/:id/assign', requireRole('admin'), async (req, res, next) => {
       'UPDATE tickets SET assignee_id=$1, status=$2, updated_at=now() WHERE id=$3 RETURNING *',
       [assignee_id, newStatus, id]
     );
+    await logEvent(id, req.user.id, t.assignee_id ? 'reassigned' : 'assigned', t.assignee_id, assignee_id);
+    if (newStatus !== t.status) await logEvent(id, req.user.id, 'status_changed', t.status, newStatus);
     res.json({ ticket: rows[0] });
+  } catch (e) { next(e); }
+});
+
+// Full history of a ticket (visible to anyone who can see the ticket).
+router.get('/:id/events', async (req, res, next) => {
+  try {
+    const id = z.coerce.number().int().positive().parse(req.params.id);
+    const params = [id];
+    const t = await query(`SELECT t.id FROM tickets t WHERE t.id=$1 AND t.deleted_at IS NULL AND ${scopeClause(req.user, params)}`, params);
+    if (!t.rows[0]) return res.status(404).json({ error: 'Ticket not found' });
+    const { rows } = await query(
+      `SELECT e.*, u.name AS actor_name FROM ticket_events e LEFT JOIN users u ON u.id=e.actor_id
+       WHERE e.ticket_id=$1 ORDER BY e.created_at, e.id`, [id]);
+    res.json({ events: rows });
   } catch (e) { next(e); }
 });
 

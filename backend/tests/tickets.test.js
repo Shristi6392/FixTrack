@@ -89,3 +89,22 @@ describe('assign and status', () => {
     expect((await patch(admin, 'status', { status: 'Open' })).status).toBe(409);
   });
 });
+
+describe('history events', () => {
+  test('every change is logged with actor, old and new value', async () => {
+    const id = (await create(student, { title: 'Wifi down in lab' })).body.ticket.id;
+    await request(app).patch(`/tickets/${id}/assign`).set(bearer(admin.token)).send({ assignee_id: tech.user.id });
+    await request(app).patch(`/tickets/${id}/status`).set(bearer(tech.token)).send({ status: 'In Progress' });
+    const res = await request(app).get(`/tickets/${id}/events`).set(bearer(student.token));
+    expect(res.status).toBe(200);
+    const types = res.body.events.map((e) => `${e.event_type}:${e.old_value}>${e.new_value}`);
+    expect(types).toEqual([
+      'created:null>Open',
+      `assigned:null>${tech.user.id}`,
+      'status_changed:Open>Assigned',
+      'status_changed:Assigned>In Progress',
+    ]);
+    expect(res.body.events[3].actor_id).toBe(tech.user.id);
+    expect((await request(app).get(`/tickets/${id}/events`).set(bearer(student2.token))).status).toBe(404);
+  });
+});
