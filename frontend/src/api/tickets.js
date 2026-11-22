@@ -20,3 +20,5 @@ export const addComment = (id, body, is_internal = false) => http.post(`/tickets
 export const getAttachments = (id) => http.get(`/tickets/${id}/attachments`).then((r) => r.data.attachments);
 
 export const listUsers = (role) => http.get('/users', { params: { role } }).then((r) => r.data.users);
+
+export const suggestTriage = (title, description) => http.post('/ai/triage', { title, description }).then((r) => r.data);

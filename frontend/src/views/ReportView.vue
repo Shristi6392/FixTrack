@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { CATEGORIES, PRIORITIES } from '../constants';
-import { createTicket, uploadPhoto, listLocations, listAssets } from '../api/tickets';
+import { createTicket, uploadPhoto, listLocations, listAssets, suggestTriage } from '../api/tickets';
 import { errorMessage } from '../api/http';
 
 const router = useRouter();
@@ -26,6 +26,21 @@ onMounted(async () => {
 
 const visibleAssets = computed(() => assets.value.filter((a) => !form.value.location_id || a.location_id === Number(form.value.location_id)));
 watch(() => form.value.location_id, () => { form.value.asset_id = ''; });
+
+// AI suggestion is optional: any failure just hides it, the form keeps working.
+const suggestion = ref(null);
+const suggesting = ref(false);
+const aiMessage = ref('');
+async function suggest() {
+  suggestion.value = null; aiMessage.value = ''; suggesting.value = true;
+  try {
+    const d = await suggestTriage(form.value.title, form.value.description);
+    if (d.available) suggestion.value = d.suggestion; else aiMessage.value = 'No AI suggestion available right now — choose manually.';
+  } catch { aiMessage.value = 'No AI suggestion available right now — choose manually.'; } finally { suggesting.value = false; }
+}
+function applySuggestion() {
+  form.value.category = suggestion.value.category; form.value.priority = suggestion.value.priority; suggestion.value = null;
+}
 
 function onFile(e) {
   const f = e.target.files[0];
@@ -58,6 +73,17 @@ async function submit() {
       <label class="block text-sm font-medium">Description
         <textarea v-model="form.description" rows="4" maxlength="5000" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
       </label>
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <button type="button" :disabled="suggesting || form.title.length < 3" class="rounded-lg border border-indigo-300 px-3 py-1.5 text-indigo-700 hover:bg-indigo-50 disabled:opacity-50" @click="suggest">
+          {{ suggesting ? 'Thinking…' : '✨ Suggest category & priority' }}
+        </button>
+        <span v-if="aiMessage" class="text-slate-500">{{ aiMessage }}</span>
+      </div>
+      <div v-if="suggestion" class="rounded-lg bg-indigo-50 p-3 text-sm ring-1 ring-indigo-200">
+        Suggested: <b>{{ suggestion.category }}</b> · <b>{{ suggestion.priority }}</b> <span class="text-slate-500">({{ suggestion.reason }})</span>
+        <button type="button" class="ml-3 font-semibold text-indigo-700 hover:underline" @click="applySuggestion">Apply</button>
+        <button type="button" class="ml-2 text-slate-500 hover:underline" @click="suggestion = null">Dismiss</button>
+      </div>
       <div class="grid grid-cols-2 gap-4">
         <label class="block text-sm font-medium">Category
           <select v-model="form.category" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option v-for="c in CATEGORIES" :key="c">{{ c }}</option></select>
