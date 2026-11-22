@@ -7,6 +7,8 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 app.use('/auth', require('./routes/auth'));
 
+app.use('/tickets', require('./routes/tickets'));
+
 app.use(notFound);
 app.use(errorHandler);
 
