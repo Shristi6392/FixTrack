@@ -18,7 +18,7 @@ const fmt = (d) => new Date(d).toLocaleDateString();
           <td class="p-3 font-medium"><RouterLink :to="`/tickets/${t.id}`" class="text-indigo-700 hover:underline">{{ t.title }}</RouterLink></td>
           <td class="p-3">{{ t.category }}</td>
           <td class="p-3"><Badge :text="t.priority" :style-class="PRIORITY_STYLE[t.priority]" /></td>
-          <td class="p-3"><Badge :text="t.status" :style-class="STATUS_STYLE[t.status]" /></td>
+          <td class="p-3"><Badge :text="t.status" :style-class="STATUS_STYLE[t.status]" /><Badge v-if="t.is_overdue" text="Overdue" style-class="ml-1 bg-red-600 text-white" /></td>
           <td class="p-3">{{ t.location_name || '—' }}</td>
           <td class="p-3">{{ fmt(t.created_at) }}</td>
         </tr>

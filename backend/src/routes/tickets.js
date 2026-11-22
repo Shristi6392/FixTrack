@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { query } = require('../db/pool');
 const { authenticate, requireRole } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { dueAtFor } = require('../services/sla');
 const { logEvent } = require('../services/events');
 const { PRIORITIES, CATEGORIES, STATUSES } = require('../constants');
 
@@ -26,6 +27,7 @@ const listSchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   q: z.string().max(100).optional(),
+  overdue: z.enum(['true', 'false']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -48,9 +50,9 @@ router.post('/', requireRole('student'), async (req, res, next) => {
   try {
     const b = createSchema.parse(req.body);
     const { rows } = await query(
-      `INSERT INTO tickets(title,description,category,priority,requester_id,location_id,asset_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [b.title, b.description, b.category, b.priority, req.user.id, b.location_id ?? null, b.asset_id ?? null]
+      `INSERT INTO tickets(title,description,category,priority,requester_id,location_id,asset_id,due_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [b.title, b.description, b.category, b.priority, req.user.id, b.location_id ?? null, b.asset_id ?? null, dueAtFor(b.priority)]
     );
     await logEvent(rows[0].id, req.user.id, 'created', null, 'Open');
     res.status(201).json({ ticket: rows[0] });
@@ -69,6 +71,7 @@ router.get('/', async (req, res, next) => {
     if (f.location_id) add('t.location_id = ?', f.location_id);
     if (f.from) add('t.created_at >= ?', f.from);
     if (f.to) add('t.created_at <= ?', f.to);
+    if (f.overdue) where.push(f.overdue === 'true' ? 't.is_overdue' : 'NOT t.is_overdue');
     if (f.q) { params.push(`%${f.q}%`); where.push(`(t.title ILIKE $${params.length} OR t.description ILIKE $${params.length})`); }
     const whereSql = where.join(' AND ');
     const total = (await query(`SELECT count(*)::int AS n FROM tickets t WHERE ${whereSql}`, params)).rows[0].n;

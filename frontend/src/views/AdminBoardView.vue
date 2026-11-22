@@ -10,7 +10,7 @@ const technicians = ref([]);
 const total = ref(0);
 const page = ref(1);
 const limit = 15;
-const filters = ref({ q: '', status: '', priority: '', category: '' });
+const filters = ref({ q: '', status: '', priority: '', category: '', overdue: '' });
 const error = ref('');
 
 async function load() {
@@ -43,6 +43,7 @@ async function assign(t, assigneeId) {
       <select v-model="filters.status" class="rounded-lg border border-slate-300 px-3 py-1.5"><option value="">All statuses</option><option v-for="s in STATUSES" :key="s">{{ s }}</option></select>
       <select v-model="filters.priority" class="rounded-lg border border-slate-300 px-3 py-1.5"><option value="">All priorities</option><option v-for="p in PRIORITIES" :key="p">{{ p }}</option></select>
       <select v-model="filters.category" class="rounded-lg border border-slate-300 px-3 py-1.5"><option value="">All categories</option><option v-for="c in CATEGORIES" :key="c">{{ c }}</option></select>
+      <select v-model="filters.overdue" class="rounded-lg border border-slate-300 px-3 py-1.5"><option value="">Overdue or not</option><option value="true">Overdue only</option><option value="false">Not overdue</option></select>
     </div>
     <p v-if="error" class="mb-3 rounded bg-red-50 p-2 text-sm text-red-700" role="alert">{{ error }}</p>
     <div class="overflow-x-auto rounded-2xl bg-white shadow ring-1 ring-slate-200">
@@ -56,7 +57,7 @@ async function assign(t, assigneeId) {
             <td class="p-3 font-medium"><RouterLink :to="`/tickets/${t.id}`" class="text-indigo-700 hover:underline">{{ t.title }}</RouterLink></td>
             <td class="p-3">{{ t.category }}</td>
             <td class="p-3"><Badge :text="t.priority" :style-class="PRIORITY_STYLE[t.priority]" /></td>
-            <td class="p-3"><Badge :text="t.status" :style-class="STATUS_STYLE[t.status]" /></td>
+            <td class="p-3"><Badge :text="t.status" :style-class="STATUS_STYLE[t.status]" /><Badge v-if="t.is_overdue" text="Overdue" style-class="ml-1 bg-red-600 text-white" /></td>
             <td class="p-3">{{ t.requester_name }}</td>
             <td class="p-3">
               <select v-if="!['Resolved', 'Closed'].includes(t.status)" :value="t.assignee_id || ''" class="rounded border border-slate-300 px-2 py-1" @change="assign(t, $event.target.value)">

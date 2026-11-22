@@ -36,7 +36,7 @@ async function advance(t) {
         <div>
           <RouterLink :to="`/tickets/${t.id}`" class="font-semibold text-indigo-700 hover:underline">#{{ t.id }} · {{ t.title }}</RouterLink>
           <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-            <Badge :text="t.priority" :style-class="PRIORITY_STYLE[t.priority]" /><Badge :text="t.status" :style-class="STATUS_STYLE[t.status]" />
+            <Badge :text="t.priority" :style-class="PRIORITY_STYLE[t.priority]" /><Badge :text="t.status" :style-class="STATUS_STYLE[t.status]" /><Badge v-if="t.is_overdue" text="Overdue" style-class="bg-red-600 text-white" />
             <span>{{ t.category }}</span><span v-if="t.location_name">· {{ t.location_name }}</span>
           </div>
         </div>

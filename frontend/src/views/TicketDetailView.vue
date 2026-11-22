@@ -66,7 +66,7 @@ const describe = (e) => {
       <div class="rounded-2xl bg-white p-6 shadow ring-1 ring-slate-200">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <h1 class="text-2xl font-bold">#{{ ticket.id }} · {{ ticket.title }}</h1>
-          <div class="flex gap-2"><Badge :text="ticket.priority" :style-class="PRIORITY_STYLE[ticket.priority]" /><Badge :text="ticket.status" :style-class="STATUS_STYLE[ticket.status]" /></div>
+          <div class="flex gap-2"><Badge :text="ticket.priority" :style-class="PRIORITY_STYLE[ticket.priority]" /><Badge :text="ticket.status" :style-class="STATUS_STYLE[ticket.status]" /><Badge v-if="ticket.is_overdue" text="Overdue" style-class="bg-red-600 text-white" /></div>
         </div>
         <p class="mt-3 whitespace-pre-line text-slate-700">{{ ticket.description || 'No description.' }}</p>
         <dl class="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
@@ -76,6 +76,7 @@ const describe = (e) => {
           <div><dt class="text-slate-500">Reported by</dt><dd>{{ ticket.requester_name }}</dd></div>
           <div><dt class="text-slate-500">Assigned to</dt><dd>{{ ticket.assignee_name || 'Unassigned' }}</dd></div>
           <div><dt class="text-slate-500">Created</dt><dd>{{ fmt(ticket.created_at) }}</dd></div>
+          <div><dt class="text-slate-500">SLA due</dt><dd :class="ticket.is_overdue ? 'font-semibold text-red-600' : ''">{{ ticket.due_at ? fmt(ticket.due_at) : '—' }}</dd></div>
         </dl>
         <div v-if="attachments.length" class="mt-4 flex gap-3">
           <a v-for="a in attachments" :key="a.id" :href="`/api${a.url}`" target="_blank"><img :src="`/api${a.url}`" alt="Ticket photo" class="h-24 rounded-lg ring-1 ring-slate-200" /></a>
