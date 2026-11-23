@@ -1,0 +1,23 @@
+# Render blueprint: backend API. Database = Neon (PostgreSQL), Redis = Upstash.
+services:
+  - type: web
+    name: fixtrack-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/db/migrate.js && node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL      # Neon connection string (append ?sslmode=require)
+        sync: false
+      - key: REDIS_URL         # Upstash Redis URL (rediss://...)
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY # optional; AI features are skipped without it
+        sync: false
+      - key: CORS_ORIGIN       # your Vercel URL, e.g. https://fixtrack.vercel.app
+        sync: false

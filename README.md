@@ -78,3 +78,12 @@ See [docs/architecture.md](docs/architecture.md) for diagrams.
 ## API overview
 `/auth/*`, `/tickets` (+ `/:id/status|assign|comments|events|attachments`), `/locations`, `/assets`, `/users`,
 `/pm-schedules`, `/ai/triage`, `/ai/duplicates`, `/dashboard/summary|by-category|failing-assets`, `/health`.
+
+## Deployment (free tiers)
+1. **Neon** – create a PostgreSQL project, copy the connection string (`...?sslmode=require`).
+2. **Upstash** – create a Redis database, copy the `rediss://` URL.
+3. **Render** – New → Blueprint, point at this repo (uses `render.yaml`). Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGIN` and optionally `ANTHROPIC_API_KEY`. Migrations run on every start.
+4. **Vercel** – import the repo with root directory `frontend` (framework: Vite). If your Render service URL differs from `https://fixtrack-api.onrender.com`, update the destination in `frontend/vercel.json`.
+5. Set `CORS_ORIGIN` on Render to the Vercel URL. Optionally run `node src/db/seed.js` once from the Render shell for demo users.
+
+Note: Render's free web service sleeps when idle, and ticket photos are stored on local disk there (ephemeral). Use Cloudinary/S3 for durable photos in production.
