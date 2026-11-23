@@ -3,6 +3,6 @@ node_modules/
 dist/
 coverage/
 *.log
-uploads/*
-!uploads/.gitkeep
+**/uploads/*
+!**/uploads/.gitkeep
 .DS_Store
